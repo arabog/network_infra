@@ -1,0 +1,32 @@
+
+
+Resources:
+  MainVPC:
+  InternetGW:
+  AttachInternetGateway:
+  PublicSubnet1:
+  PrivateSubnet1:
+  NAT:
+  EIP:
+  PrivateRouteTable:
+  PublicRouteTable:
+  AssociatePUBRT:
+  AssociatePRIVRT:
+  PublicInternetRoute:
+  PrivateInternetOutboundRoute:
+
+
+Outputs:
+  MainVPC:
+  InternetGW:
+  AttachInternetGateway:
+  PublicSubnet1:
+  PrivateSubnet1:
+  NAT:
+  EIP:
+  PrivateRouteTable:
+  PublicRouteTable:
+  AssociatePUBRT:
+  AssociatePRIVRT:
+  PublicInternetRoute:
+  PrivateInternetOutboundRoute:
