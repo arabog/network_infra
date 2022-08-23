@@ -1,32 +1,208 @@
+Description:
+  Network Infrastructure Challenge
 
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
 
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first AZ
+    Type: String
+    Default: 10.0.0.0/24
+
+  PrivateSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+    Type: String
+    Default: 10.0.1.0/24
+
+######################################### 
 Resources:
   MainVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
   InternetGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+    
+######################################### 
   AttachInternetGateway:
-  PublicSubnet1:
-  PrivateSubnet1:
-  NAT:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGW
+      VpcId: !Ref VPC
+      
+######################################### 
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
+
+  PrivateSubnet: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PrivateSubnetCIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+
+######################################### 
   EIP:
-  PrivateRouteTable:
+    Type: AWS::EC2::EIP
+      DependsOn: InternetGatewayAttachment
+      Properties: 
+        Domain: vpc
+
+  NAT:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      
+######################################### 
   PublicRouteTable:
-  AssociatePUBRT:
-  AssociatePRIVRT:
+    Type: AWS::EC2::RouteTable
+      Properties: 
+        VpcId: !Ref VPC
+        Tags: 
+          - Key: Name 
+            Value: !Sub ${EnvironmentName} Public Routes
+
   PublicInternetRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  AssociatePUBRT:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name 
+          Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+
   PrivateInternetOutboundRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  AssociatePRIVRT:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet
 
 
+######################################### 
 Outputs:
   MainVPC:
+    Description: A reference to the created VPC
+    Value: !Ref MainVPC
+    Export:
+      Name: !Sub ${EnvironmentName}-VPCID
+  
   InternetGW:
+    Description: A reference to the created IGW
+      Value: !Ref InternetGW
+      Export:
+        Name: !Sub ${EnvironmentName}-IGW
+
   AttachInternetGateway:
-  PublicSubnet1:
-  PrivateSubnet1:
+    Description: A reference to the created AIG
+    Value: !Ref AttachInternetGateway
+    Export:
+      Name: !Sub ${EnvironmentName}-AIG
+
+  PublicSubnet:
+    Description: A reference to the created PublicSubnet
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub ${EnvironmentName}-PUB-SN
+
+  PrivateSubnet:
+    Description: A reference to the created PrivateSubnet
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub ${EnvironmentName}-PrivateSubnet
+
   NAT:
+    Description: A reference to the created NAT
+    Value: !Ref NAT
+    Export:
+      Name: !Sub ${EnvironmentName}-NAT
+
   EIP:
+    Description: A reference to the created EIP
+      Value: !Ref EIP
+      Export:
+        Name: !Sub ${EnvironmentName}-EIP
+
   PrivateRouteTable:
+    Description: A reference to the created PrivateRouteTable
+      Value: !Ref PrivateRouteTable
+      Export:
+        Name: !Sub ${EnvironmentName}-PrivateRouteTable
+        
   PublicRouteTable:
+    Description: A reference to the created PublicRouteTable
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: !Sub ${EnvironmentName}-PublicRouteTable
+
   AssociatePUBRT:
+    Description: A reference to the created AssociatePUBRT
+    Value: !Ref AssociatePUBRT
+    Export:
+      Name: !Sub ${EnvironmentName}-AssociatePUBRT
+
   AssociatePRIVRT:
+    Description: A reference to the created AssociatePRIVRT
+      Value: !Ref AssociatePRIVRT
+      Export:
+        Name: !Sub ${EnvironmentName}-AssociatePRIVRT
+
   PublicInternetRoute:
+    Description: A reference to the created PublicInternetRoute
+      Value: !Ref PublicInternetRoute
+      Export:
+        Name: !Sub ${EnvironmentName}-PublicInternetRoute
+
   PrivateInternetOutboundRoute:
+    Description: A reference to the created PrivateInternetOutboundRoute
+      Value: !Ref PrivateInternetOutboundRoute
+      Export:
+        Name: !Sub ${EnvironmentName}-PrivateInternetOutboundRoute
